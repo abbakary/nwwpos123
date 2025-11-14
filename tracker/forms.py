@@ -598,7 +598,7 @@ class OrderForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         t = cleaned.get("type")
-        
+
         if t == "sales":
             item_id = cleaned.get("item_name")
             if not item_id:
@@ -625,32 +625,8 @@ class OrderForm(forms.ModelForm):
                 self.add_error("quantity", "Quantity must be at least 1")
             # Always set tire_type to New (hidden field)
             cleaned["tire_type"] = "New"
-            
-            # Calculate estimated duration from selected tire services
-            tire_services = cleaned.get("tire_services") or []
-            if tire_services:
-                try:
-                    addons = ServiceAddon.objects.filter(name__in=tire_services, is_active=True)
-                    total_minutes = sum(int(a.estimated_minutes or 0) for a in addons)
-                    # If there's already an estimated duration, add to it
-                    current_duration = cleaned.get("estimated_duration") or 0
-                    try:
-                        current_duration = int(current_duration)
-                    except (ValueError, TypeError):
-                        current_duration = 0
-                    cleaned["estimated_duration"] = current_duration + total_minutes
-                except Exception:
-                    pass
 
         elif t == "service":
-            # Provide sensible defaults to avoid failing submission when user selects Service
-            dur = cleaned.get("estimated_duration")
-            try:
-                dur = int(dur) if dur is not None and str(dur) != '' else None
-            except (TypeError, ValueError):
-                dur = None
-            if not dur or dur <= 0:
-                cleaned["estimated_duration"] = 50
             services = cleaned.get("service_selection") or []
             desc = (cleaned.get("description") or "").strip()
             if services:
@@ -666,22 +642,13 @@ class OrderForm(forms.ModelForm):
             cleaned["description"] = desc
             # Always set tire_type to New (hidden field)
             cleaned["tire_type"] = "New"
-            
-            # Calculate estimated duration from selected services
-            if services:
-                try:
-                    service_types = ServiceType.objects.filter(name__in=services, is_active=True)
-                    total_minutes = sum(int(s.estimated_minutes or 0) for s in service_types)
-                    cleaned["estimated_duration"] = total_minutes
-                except Exception:
-                    pass
 
         elif t == "inquiry":
             if not cleaned.get("inquiry_type"):
                 self.add_error("inquiry_type", "Inquiry type is required")
             if not cleaned.get("questions"):
                 self.add_error("questions", "Please provide your questions")
-                
+
         return cleaned
 
 class CustomerSearchForm(forms.Form):
