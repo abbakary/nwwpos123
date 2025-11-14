@@ -41,13 +41,12 @@ def create_service_types():
         service_type, created = ServiceType.objects.get_or_create(
             name=service_data["name"],
             defaults={
-                "estimated_minutes": service_data["estimated_minutes"],
                 "is_active": True
             }
         )
         service_types.append(service_type)
         if created:
-            print(f"✓ Created service type: {service_type.name} ({service_type.estimated_minutes} mins)")
+            print(f"✓ Created service type: {service_type.name}")
         else:
             print(f"• Service type already exists: {service_type.name}")
     
