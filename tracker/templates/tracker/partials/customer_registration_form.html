@@ -156,11 +156,10 @@
                     {% for svc in service_types %}
                     <div class="col-md-6 col-lg-4">
                       <div class="service-checkbox-card">
-                        <input class="form-check-input service-checkbox" type="checkbox" id="svc_chk_{{ forloop.counter }}" name="service_selection" value="{{ svc.name }}" data-minutes="{{ svc.estimated_minutes }}" {% if step3.service_selection and svc.name in step3.service_selection %}checked{% endif %}>
+                        <input class="form-check-input service-checkbox" type="checkbox" id="svc_chk_{{ forloop.counter }}" name="service_selection" value="{{ svc.name }}" {% if step3.service_selection and svc.name in step3.service_selection %}checked{% endif %}>
                         <label class="service-checkbox-label" for="svc_chk_{{ forloop.counter }}">
                           <div class="service-checkbox-content">
                             <div class="service-checkbox-name">{{ svc.name }}</div>
-                            <div class="service-checkbox-duration"><i class="fa fa-clock-o me-1"></i>{{ svc.estimated_minutes }} mins</div>
                           </div>
                         </label>
                       </div>
