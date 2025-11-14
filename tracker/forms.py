@@ -486,7 +486,6 @@ class OrderForm(forms.ModelForm):
             "vehicle",
             "priority",
             "description",
-            "estimated_duration",
             "item_name",
             "brand",
             "quantity",
