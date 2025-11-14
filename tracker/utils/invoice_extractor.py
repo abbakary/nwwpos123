@@ -224,74 +224,142 @@ def extract_header_fields(text):
 
 def extract_line_items(text):
     """Extract line items from invoice text.
-    Handles lines that look like: Sr/Item code, Description, Qty, Rate, Value
+    Handles Proforma Invoice format with table: Sr No., Item Code, Description, Type, Qty, Rate, Value
     """
     items = []
     lines = [l.strip() for l in text.splitlines() if l.strip()]
 
     # Try to find the table header by looking for item-related keywords
     header_idx = None
-    for idx, line in enumerate(lines[:30]):
-        if re.search(r'\b(Item|Description|Qty|Quantity|Price|Amount|Value|Sr|S\.N)\b', line, re.I) and \
-           re.search(r'\b(Description|Qty|Quantity|Price|Amount|Value)\b', line, re.I):
+    for idx, line in enumerate(lines[:40]):
+        # Look for header that has Sr/Code/Description/Qty/Rate/Value keywords
+        has_sr = re.search(r'\b(Sr|S\.N|Serial)\b', line, re.I)
+        has_code = re.search(r'\b(Item\s*Code|Code)\b', line, re.I)
+        has_desc = re.search(r'\bDescription\b', line, re.I)
+        has_qty = re.search(r'\b(Qty|Quantity)\b', line, re.I)
+        has_value = re.search(r'\b(Value|Rate|Price|Amount)\b', line, re.I)
+
+        # Count how many item-related keywords are present
+        keyword_count = sum([bool(has_sr), bool(has_code), bool(has_desc), bool(has_qty), bool(has_value)])
+
+        if keyword_count >= 4:  # Need at least 4 of the 5 keywords
             header_idx = idx
+            logger.info(f"Table header detected at line {idx}: {line}")
             break
 
     # Parse lines after header
     start = header_idx + 1 if header_idx is not None else 0
+    current_item = None
+
     for line in lines[start:]:
         # Stop at footer/summary keywords
-        if re.search(r'\b(Net\s*Value|Total|Gross\s*Value|Grand\s*Total|VAT|Tax|Payment|Amount\s*Due|Summary)\b', line, re.I):
+        if re.search(r'\b(Net\s*Value|Total|Gross\s*Value|Grand\s*Total|VAT|Tax|Payment|Amount\s*Due|Summary|NOTE)\b', line, re.I):
+            # Save any pending item before breaking
+            if current_item and current_item.get('description'):
+                items.append(current_item)
             break
 
-        # Find all numbers in line
-        numbers = re.findall(r'[0-9\,]+\.?\d*', line)
-        if len(numbers) >= 1 and len(line) > 5:
-            # Extract description by removing numbers
-            desc = re.sub(r'\s*[0-9\,]+\.?\d*\s*', ' ', line).strip()
-            desc = ' '.join(desc.split())
+        # Skip empty lines
+        if not line or len(line) < 3:
+            continue
 
-            if desc and len(desc) > 2 and not re.match(r'^\d+$', desc):
-                # Last number is usually the amount/value
-                value = numbers[-1] if numbers else None
-                qty = None
-                rate = None
-                item_code = None
+        # Check if line starts with Sr No (1, 2, 3, etc.) - marks new item
+        sr_match = re.match(r'^(\d{1,2})\s+', line)
 
-                # If we have multiple numbers, second-to-last might be qty or rate
-                if len(numbers) >= 2:
-                    # Check if it looks like a small quantity
-                    try:
-                        qty_val = float(numbers[-2].replace(',', ''))
-                        if 0 < qty_val < 1000 and int(qty_val) == qty_val:
-                            qty = numbers[-2]
-                        else:
-                            rate = numbers[-2]  # Otherwise it's probably the unit price
-                    except Exception:
-                        pass
+        if sr_match:
+            # Save previous item if exists
+            if current_item and current_item.get('description'):
+                items.append(current_item)
 
-                # Try to extract item code (first sequence of numbers)
-                m = re.search(r'\b(\d{3,6})\b', line)
-                if m:
-                    item_code = m.group(1)
+            # Start new item
+            sr_no = int(sr_match.group(1))
+            rest_of_line = re.sub(r'^\d{1,2}\s+', '', line)
 
-                def clean_num(s):
-                    try:
-                        if s:
-                            cleaned = re.sub(r'[^\d\.\,\-]', '', str(s)).strip()
-                            return Decimal(cleaned.replace(',', ''))
-                    except Exception:
-                        return None
-                    return None
+            # Extract all numbers from the line
+            numbers = re.findall(r'[0-9\,]+\.?\d*', rest_of_line)
 
-                items.append({
-                    'item_code': item_code,
-                    'description': desc[:255],
-                    'qty': int(float(qty.replace(',', ''))) if qty else 1,
-                    'rate': clean_num(rate),
-                    'value': clean_num(value),
-                })
+            # Try to extract item code (10-digit or smaller sequences at start)
+            item_code = None
+            desc_start = rest_of_line
+            code_match = re.search(r'^(\d{6,10})\s+', rest_of_line)
+            if code_match:
+                item_code = code_match.group(1)
+                desc_start = rest_of_line[code_match.end():]
 
+            # Extract description (text before any unit type keywords like PCS, UNT, etc.)
+            description = ''
+            # Look for unit keywords that might indicate end of description
+            unit_keywords = r'\b(PCS|NOS|KG|HR|LTR|PIECES|UNITS?|KIT|BOX|CASE|SETS?|PC|UNT|KTS|BAG|BUNDLE|PACK|CYLINDER|LITRE|TYRE|TIRE|TL|LT|NOS)\b'
+            unit_match = re.search(unit_keywords, desc_start, re.I)
+            if unit_match:
+                description = desc_start[:unit_match.start()].strip()
+            else:
+                # No unit found, take everything except the last few tokens (which might be numbers)
+                tokens = desc_start.split()
+                # Remove trailing numbers
+                while tokens and re.match(r'^[\d\,\.]+$', tokens[-1]):
+                    tokens.pop()
+                description = ' '.join(tokens)
+
+            # Clean up description
+            description = re.sub(r'\s+', ' ', description).strip()
+            if len(description) > 255:
+                description = description[:255]
+
+            # Initialize current item
+            current_item = {
+                'item_code': item_code,
+                'description': description,
+                'qty': 1,
+                'rate': None,
+                'value': None,
+                'unit': None,
+            }
+
+            # Extract quantity and amounts from numbers
+            if len(numbers) >= 1:
+                current_item['value'] = clean_num(numbers[-1])
+            if len(numbers) >= 2:
+                # Second to last is usually rate or qty
+                try:
+                    val = float(numbers[-2].replace(',', ''))
+                    if 0 < val < 1000 and val == int(val):
+                        current_item['qty'] = int(val)
+                    else:
+                        current_item['rate'] = clean_num(numbers[-2])
+                except Exception:
+                    pass
+
+            # Extract unit type if present
+            if unit_match:
+                current_item['unit'] = unit_match.group(1).upper()
+
+        elif current_item and not re.match(r'^\d{1,2}\s+', line):
+            # Continuation line - append to description
+            # But skip if it looks like a column header or total line
+            if not re.search(r'\b(Description|Type|Qty|Rate|Value|TSH|Total|Page)\b', line, re.I):
+                if current_item['description']:
+                    current_item['description'] += ' ' + line
+                else:
+                    current_item['description'] = line
+                current_item['description'] = current_item['description'][:255]
+
+    # Save final item
+    if current_item and current_item.get('description'):
+        items.append(current_item)
+
+    def clean_num(s):
+        """Helper to convert string number to Decimal"""
+        try:
+            if s:
+                cleaned = re.sub(r'[^\d\.\,\-]', '', str(s)).strip()
+                if cleaned:
+                    return Decimal(cleaned.replace(',', ''))
+        except Exception:
+            return None
+        return None
+
+    logger.info(f"Extracted {len(items)} line items")
     return items
 
 
