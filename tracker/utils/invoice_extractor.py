@@ -360,17 +360,6 @@ def extract_line_items(text):
     if current_item and current_item.get('description'):
         items.append(current_item)
 
-    def clean_num(s):
-        """Helper to convert string number to Decimal"""
-        try:
-            if s:
-                cleaned = re.sub(r'[^\d\.\,\-]', '', str(s)).strip()
-                if cleaned:
-                    return Decimal(cleaned.replace(',', ''))
-        except Exception:
-            return None
-        return None
-
     logger.info(f"Extracted {len(items)} line items")
     return items
 
