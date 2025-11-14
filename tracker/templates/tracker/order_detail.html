@@ -2007,10 +2007,88 @@
       flex-direction: column;
       width: 100%;
     }
-    
+
     .action-buttons-container .btn {
       width: 100%;
     }
+  }
+
+  /* Enhanced Signature Modal Styles */
+  .signature-modal-container {
+    max-width: 550px;
+  }
+
+  .signature-modal-content {
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+  }
+
+  .signature-modal-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  }
+
+  .signature-modal-body {
+    background: white;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .signature-modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+  }
+
+  .signature-pad-wrapper {
+    background: white;
+    border-width: 2px;
+    border-color: #dee2e6;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+
+  .signature-pad-wrapper:hover {
+    border-color: #28a745;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
+  }
+
+  .signature-pad-wrapper:active {
+    border-color: #28a745;
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.15);
+  }
+
+  #signaturePad {
+    background: white;
+  }
+
+  #signaturePreviewMini {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Responsive adjustments for signature modal */
+  @media (max-width: 576px) {
+    .signature-modal-container {
+      max-width: 95vw;
+    }
+
+    .signature-modal-body {
+      max-height: 80vh;
+      padding: 1rem !important;
+    }
+  }
+
+  /* Button styling for signature modal */
+  .signature-modal-footer .btn-success {
+    min-width: 150px;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .signature-modal-footer .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
   }
 </style>
 {% endblock %}
