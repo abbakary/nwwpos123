@@ -1059,13 +1059,19 @@
 
 <!-- Capture Signature Modal -->
 <div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient-success text-white border-0">
-        <h5 class="modal-title fw-bold"><i class="fa fa-pen-fancy me-2"></i>Capture Signature</h5>
+  <div class="modal-dialog modal-dialog-centered signature-modal-container">
+    <div class="modal-content border-0 signature-modal-content">
+      <div class="modal-header signature-modal-header bg-gradient-success text-white border-0 rounded-top">
+        <div class="d-flex align-items-center">
+          <i class="fa fa-pen-fancy me-3 fa-lg"></i>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">Capture Signature</h5>
+            <small class="opacity-75">Complete the order by signing</small>
+          </div>
+        </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4">
+      <div class="modal-body p-4 signature-modal-body">
         <form method="post" enctype="multipart/form-data" action="{% url 'tracker:complete_order' pk=order.id %}" id="completeForm">
           {% csrf_token %}
           <input type="hidden" name="signature_data" id="signatureDataInput">
@@ -1073,45 +1079,52 @@
 
           <!-- Signature Canvas -->
           <div class="mb-4">
-            <label class="form-label fw-semibold">Customer Signature <span class="text-danger">*</span></label>
-            <div id="docSignContainer" class="border-2 rounded-lg position-relative overflow-hidden bg-light d-flex align-items-center justify-content-center" style="height:240px; border-style: dashed;">
+            <label class="form-label fw-bold text-dark mb-2">
+              <i class="fa fa-signature me-2 text-success"></i>Customer Signature <span class="text-danger">*</span>
+            </label>
+            <div id="docSignContainer" class="signature-pad-wrapper position-relative overflow-hidden bg-white border border-2 rounded-lg d-flex align-items-center justify-content-center" style="height: 200px; border-color: #dee2e6; cursor: crosshair;">
               <div id="docPreviewHost" class="w-100 h-100 d-flex align-items-center justify-content-center text-muted">
                 <div class="text-center">
-                  <i class="fa fa-mouse fa-2x mb-2 text-muted"></i>
-                  <p class="mb-0">Click to draw signature</p>
+                  <i class="fa fa-pen-fancy fa-3x mb-2 text-muted opacity-50"></i>
+                  <p class="mb-0 fw-medium">Click and draw signature</p>
+                  <small class="text-muted">Use mouse or touch screen</small>
                 </div>
               </div>
               <canvas id="signaturePad" class="position-absolute top-0 start-0 w-100 h-100" style="cursor: crosshair; z-index: 2; display: none;"></canvas>
             </div>
-            <div class="d-flex gap-2 mt-2">
+            <div class="d-flex gap-2 mt-2 align-items-center">
               <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSignatureBtn" style="display: none;">
-                <i class="fa fa-undo me-1"></i>Clear
+                <i class="fa fa-redo me-1"></i>Clear Signature
               </button>
-              <div id="signaturePreviewSmall" style="margin-left: auto; display: none;">
+              <div id="signaturePreviewSmall" class="ms-auto" style="display: none;">
                 <small class="text-muted me-2">Preview:</small>
-                <canvas id="signaturePreviewMini" width="80" height="40" style="border: 1px solid #dee2e6; max-height: 40px;"></canvas>
+                <canvas id="signaturePreviewMini" width="100" height="50" style="border: 2px solid #dee2e6; border-radius: 4px; background: white; max-height: 50px;"></canvas>
               </div>
             </div>
           </div>
 
           <!-- Reason Field -->
           <div class="mb-4">
-            <label class="form-label fw-semibold">Reason <small class="text-muted">(if order took longer than expected)</small></label>
-            <textarea name="signature_reason" id="signatureReasonField" class="form-control" rows="3" placeholder="e.g., Additional repairs needed, customer delayed arrival, supply shortage..."></textarea>
+            <label class="form-label fw-bold text-dark mb-2">
+              <i class="fa fa-comment-dots me-2 text-info"></i>Reason <small class="fw-normal text-muted">(if order took longer than expected)</small>
+            </label>
+            <textarea name="signature_reason" id="signatureReasonField" class="form-control" rows="3" placeholder="e.g., Additional repairs needed, customer delayed arrival, supply shortage, technical difficulties..."></textarea>
             <small class="text-muted d-block mt-1">Explain any delays or special circumstances about this order.</small>
           </div>
 
           <!-- Info Alert -->
-          <div class="alert alert-info border-0 bg-info bg-opacity-10">
-            <i class="fa fa-info-circle me-2 text-info"></i>
-            <span class="text-dark">Draw the customer's signature. This will complete the order.</span>
+          <div class="alert alert-info border-0 bg-info bg-opacity-10 rounded-lg">
+            <div class="d-flex">
+              <i class="fa fa-info-circle me-2 text-info mt-1"></i>
+              <span class="text-dark">Draw the customer's signature. This will complete the order. All information will be saved together.</span>
+            </div>
           </div>
         </form>
       </div>
-      <div class="modal-footer bg-light border-0">
+      <div class="modal-footer bg-white border-top signature-modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="footerSignAndComplete">
-          <i class="fa fa-check-circle me-1"></i>Complete & Save Signature
+        <button type="button" class="btn btn-success btn-lg fw-bold" id="footerSignAndComplete">
+          <i class="fa fa-check-circle me-2"></i>Complete & Save
         </button>
       </div>
     </div>
