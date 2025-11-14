@@ -57,14 +57,14 @@ def api_start_order(request):
 
         user_branch = get_user_branch(request.user)
 
-        # Check for existing started order for this plate (status='created')
+        # Check for existing started order for this plate (status='in_progress')
         # If one exists and hasn't been updated yet, return it instead of creating a duplicate
         existing_vehicle = Vehicle.objects.filter(plate_number__iexact=plate_number, customer__branch=user_branch).select_related('customer').first()
         if existing_vehicle:
-            # Check if there's already a created order for this vehicle
+            # Check if there's already a started (in_progress) order for this vehicle
             existing_order = Order.objects.filter(
                 vehicle=existing_vehicle,
-                status='created'
+                status='in_progress'
             ).order_by('-created_at').first()
 
             if existing_order and not use_existing and not existing_customer_id:
@@ -150,22 +150,22 @@ def api_start_order(request):
             if service_selection:
                 desc += ": " + ", ".join(service_selection)
 
-            # Create the order only if one doesn't already exist for this vehicle
+            # Create the order only if one doesn't already exist for this vehicle in progress
             existing_order = Order.objects.filter(
                 vehicle=vehicle,
-                status='created'
+                status='in_progress'
             ).first()
 
             if existing_order:
                 order = existing_order
             else:
-                # Create new order
+                # Create new order with status='in_progress' since it's being started immediately
                 order = Order.objects.create(
                     customer=customer,
                     vehicle=vehicle,
                     branch=user_branch,
                     type=order_type,
-                    status='created',
+                    status='in_progress',
                     started_at=timezone.now(),
                     description=desc,
                     priority='medium',
@@ -300,15 +300,15 @@ def started_orders_dashboard(request):
         orders_by_plate[plate].append(order)
 
     # Calculate statistics
-    # Include all started orders for accurate counts
+    # Include all started orders for accurate counts (status='in_progress' means started)
     total_started = Order.objects.filter(
         branch=user_branch,
-        status='created'
+        status='in_progress'
     ).count()
 
     today_started = Order.objects.filter(
         branch=user_branch,
-        status='created',
+        status='in_progress',
         started_at__date=timezone.now().date()
     ).count()
 
@@ -316,7 +316,7 @@ def started_orders_dashboard(request):
     from django.db.models import Count
     today_orders = Order.objects.filter(
         branch=user_branch,
-        status='created',
+        status='in_progress',
         started_at__date=timezone.now().date(),
         vehicle__isnull=False
     ).values('vehicle__plate_number').annotate(order_count=Count('id')).filter(order_count__gte=2)
@@ -1063,15 +1063,15 @@ def api_started_orders_kpis(request):
     try:
         user_branch = get_user_branch(request.user)
 
-        # Include all started orders for accurate KPI counts
+        # Include all started orders for accurate KPI counts (status='in_progress' means started)
         total_started = Order.objects.filter(
             branch=user_branch,
-            status='created'
+            status='in_progress'
         ).count()
 
         today_started = Order.objects.filter(
             branch=user_branch,
-            status='created',
+            status='in_progress',
             started_at__date=timezone.now().date()
         ).count()
 
@@ -1079,7 +1079,7 @@ def api_started_orders_kpis(request):
         from django.db.models import Count
         today_orders = Order.objects.filter(
             branch=user_branch,
-            status='created',
+            status='in_progress',
             started_at__date=timezone.now().date(),
             vehicle__isnull=False
         ).values('vehicle__plate_number').annotate(order_count=Count('id')).filter(order_count__gte=2)

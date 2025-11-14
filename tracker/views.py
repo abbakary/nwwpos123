@@ -2617,9 +2617,9 @@ def orders_list(request: HttpRequest):
     revenue_today = 0
 
     # Get started orders KPIs (for the Started Orders view)
-    started_orders_qs = scope_queryset(Order.objects.filter(status='created'), request.user, request)
+    started_orders_qs = scope_queryset(Order.objects.filter(status='in_progress'), request.user, request)
     started_total = started_orders_qs.count()
-    started_pending = started_orders_qs.filter(status='created').count()
+    started_pending = started_orders_qs.filter(status='in_progress').count()
     started_completed = started_orders_qs.filter(status='completed').count()
 
     # Calculate documents uploaded (document_scans count)
@@ -2985,7 +2985,7 @@ def customer_detail(request: HttpRequest, pk: int):
     # Scope orders to user's branch for proper filtering
     orders = scope_queryset(customer.orders.all(), request.user, request).order_by('-created_at')
     try:
-        started_order = orders.filter(status='created').first()
+        started_order = orders.filter(status='in_progress').first()
     except Exception:
         started_order = None
     vehicles = customer.vehicles.all()
@@ -3175,8 +3175,8 @@ def complete_order(request: HttpRequest, pk: int):
     # If signature file missing but signature_data exists, decode it into an uploaded file
     # First: enforce overrun reason if ETA exceeded. Accept overrun_reason from POST and save it before proceeding.
     try:
-        # Fetch overrun reason from POST (either form field or json body fallback)
-        overrun_reason_input = request.POST.get('overrun_reason') or request.POST.get('delay_reason') or None
+        # Fetch overrun reason from POST (check multiple field names for compatibility)
+        overrun_reason_input = request.POST.get('overrun_reason') or request.POST.get('delay_reason') or request.POST.get('signature_reason') or None
     except Exception:
         overrun_reason_input = None
 
@@ -3342,6 +3342,13 @@ def complete_order(request: HttpRequest, pk: int):
     o.completed_at = now
     reference_time = o.started_at or o.created_at
     o.actual_duration = int(max(0, (now - reference_time).total_seconds() // 60))
+
+    # Calculate estimated_duration using working hours (8 AM - 5 PM)
+    if o.started_at:
+        from .utils.time_utils import calculate_estimated_duration
+        estimated_mins = calculate_estimated_duration(o.started_at, o.completed_at)
+        if estimated_mins is not None:
+            o.estimated_duration = estimated_mins
 
     if o.type == 'sales' and (o.quantity or 0) > 0 and o.item_name and o.brand:
         from .utils import adjust_inventory
