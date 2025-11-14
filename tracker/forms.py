@@ -517,10 +517,7 @@ class OrderForm(forms.ModelForm):
         try:
             svc_qs = ServiceType.objects.filter(is_active=True).order_by('name')
             svc_choices = [(s.name, s.name) for s in svc_qs]
-            durations_map = {s.name: int(s.estimated_minutes or 0) for s in svc_qs}
             self.fields['service_selection'].choices = svc_choices
-            # Attach mapping for JS to consume
-            self.fields['service_selection'].widget.attrs['data-service-durations'] = json.dumps(durations_map)
         except Exception:
             # Keep empty choices on error
             self.fields['service_selection'].choices = []
