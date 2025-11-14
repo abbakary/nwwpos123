@@ -159,13 +159,13 @@ def api_start_order(request):
             if existing_order:
                 order = existing_order
             else:
-                # Create new order
+                # Create new order with status='in_progress' since it's being started immediately
                 order = Order.objects.create(
                     customer=customer,
                     vehicle=vehicle,
                     branch=user_branch,
                     type=order_type,
-                    status='created',
+                    status='in_progress',
                     started_at=timezone.now(),
                     description=desc,
                     priority='medium',
